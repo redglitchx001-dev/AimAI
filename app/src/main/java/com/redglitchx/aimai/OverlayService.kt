@@ -122,21 +122,30 @@ fun FloatingBubble(
     var initialTouchX = 0f
     var initialTouchY = 0f
 
+    // Black and white theme for the bubble
     Box(
         modifier = Modifier
-            .size(60.dp)
+            .size(64.dp)
             .clip(CircleShape)
-            .background(Color(0xFF1E88E5))
-            .padding(12.dp),
+            .background(Color.Black)
+            .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
-        Button(
-            onClick = onClick,
-            modifier = Modifier.fillMaxSize(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            contentPadding = PaddingValues(0.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(Color.DarkGray),
+            contentAlignment = Alignment.Center
         ) {
-            Text("AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxSize(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("AIM\nAI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
         }
     }
     
@@ -176,62 +185,105 @@ fun FloatingBubble(
 @Composable
 fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
     var aimOn by remember { mutableStateOf(false) }
-    var swipeValue by remember { mutableStateOf(50f) }
+    var scopeOnly by remember { mutableStateOf(true) }
+    var normalAim by remember { mutableStateOf(true) }
+    var aimSpeed by remember { mutableStateOf(50f) }
+    var fov by remember { mutableStateOf(30f) }
+    var bypass by remember { mutableStateOf(true) }
+    var antiCheat by remember { mutableStateOf(true) }
+    
+    var selectedApp by remember { mutableStateOf("Select Target App") }
+    var selectedModel by remember { mutableStateOf("Auto-detect Model (HTTPS)") }
 
     Card(
         modifier = Modifier
-            .width(280.dp)
+            .width(320.dp)
             .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF181818)),
-        shape = RoundedCornerShape(16.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Black),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(2.dp, Color.DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("AIM AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("SYSTEM.AIM_AI [v1.0.0]", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 Button(
                     onClick = onClose,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     contentPadding = PaddingValues(4.dp),
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
-                    Text("X", color = Color.White, fontSize = 12.sp)
+                    Text("X", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 8.dp))
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("AIM Status", color = Color.LightGray, modifier = Modifier.weight(1f))
-                Switch(
-                    checked = aimOn,
-                    onCheckedChange = { aimOn = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF1E88E5))
-                )
+            // App and Model Selection
+            Button(onClick = { selectedApp = "App Selected (Injected)" }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text(selectedApp, color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(onClick = { selectedModel = "Model Loaded [YOLOv8]" }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text(selectedModel, color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Swipe/Scope: ${swipeValue.toInt()}", color = Color.LightGray)
-            Slider(
-                value = swipeValue,
-                onValueChange = { swipeValue = it },
-                valueRange = 0f..100f,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF1E88E5),
-                    activeTrackColor = Color(0xFF1E88E5)
-                )
-            )
+            Spacer(modifier = Modifier.height(12.dp))
             
-            Spacer(modifier = Modifier.height(24.dp))
+            // Toggles
+            TechSwitch("Master AIM Switch", aimOn) { aimOn = it }
+            TechSwitch("Normal Aim Mode", normalAim) { normalAim = it }
+            TechSwitch("In-Scope Only", scopeOnly) { scopeOnly = it }
+            TechSwitch("Bypass Detection", bypass) { bypass = it }
+            TechSwitch("Anti-Cheat Blocker", antiCheat) { antiCheat = it }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Sliders
+            TechSlider("Aim Speed / Smoothing", aimSpeed) { aimSpeed = it }
+            TechSlider("FOV Radius", fov) { fov = it }
+            
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onCloseService,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                modifier = Modifier.fillMaxWidth()
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(4.dp)
             ) {
-                Text("Close Overlay", color = Color.White)
+                Text("TERMINATE PROCESS", color = Color.Black, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
+    }
+}
+
+@Composable
+fun TechSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Text("> $label", color = Color.White, modifier = Modifier.weight(1f), fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = Color.White, uncheckedThumbColor = Color.Gray, uncheckedTrackColor = Color.DarkGray)
+        )
+    }
+}
+
+@Composable
+fun TechSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
+    Column(modifier = Modifier.padding(vertical = 2.dp)) {
+        Text("> $label: ${value.toInt()}%", color = Color.White, fontSize = 12.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..100f,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.DarkGray
+            )
+        )
     }
 }
