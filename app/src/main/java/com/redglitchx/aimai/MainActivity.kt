@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -89,7 +90,12 @@ fun getInstalledApps(context: Context): List<AppInfo> {
     val intent = Intent(Intent.ACTION_MAIN, null).apply {
         addCategory(Intent.CATEGORY_LAUNCHER)
     }
-    val resolveInfos = pm.queryIntentActivities(intent, 0)
+    val flags = PackageManager.MATCH_ALL
+    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(flags.toLong()))
+    } else {
+        pm.queryIntentActivities(intent, flags)
+    }
     return resolveInfos.map {
         AppInfo(
             name = it.loadLabel(pm).toString(),
