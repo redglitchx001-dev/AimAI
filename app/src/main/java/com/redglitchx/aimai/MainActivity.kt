@@ -2,6 +2,7 @@ package com.redglitchx.aimai
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -33,6 +34,7 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import androidx.compose.runtime.LaunchedEffect
+import org.json.JSONArray
 
 data class AppInfo(val name: String, val packageName: String)
 
@@ -99,18 +101,31 @@ fun getInstalledApps(context: Context): List<AppInfo> {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
+    val prefs = context.getSharedPreferences("AimAIPrefs", Context.MODE_PRIVATE)
+
     var aiEnabled by remember { mutableStateOf(true) }
     var endpoint by remember { mutableStateOf("https://api.models.local/v1/detect") }
-    var selectedModel by remember { mutableStateOf("[SELECT MODEL]") }
+    var selectedModel by remember { mutableStateOf(prefs.getString("selected_model", "[SELECT MODEL]") ?: "[SELECT MODEL]") }
     var showModelDialog by remember { mutableStateOf(false) }
     var availableModels by remember { mutableStateOf(listOf("[YOLOv8-Fast]", "[YOLOv10-Silent]", "[Auto-Detect HTTPS]")) }
 
     var showAppDialog by remember { mutableStateOf(false) }
-    var selectedApp by remember { mutableStateOf<AppInfo?>(null) }
+    var selectedAppPackage by remember { mutableStateOf(prefs.getString("selected_app_pkg", "") ?: "") }
+    var selectedAppName by remember { mutableStateOf(prefs.getString("selected_app_name", "") ?: "") }
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+
+    var isFetchingModels by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         installedApps = withContext(Dispatchers.IO) { getInstalledApps(context) }
+    }
+
+    fun savePrefs() {
+        prefs.edit()
+            .putString("selected_app_pkg", selectedAppPackage)
+            .putString("selected_app_name", selectedAppName)
+            .putString("selected_model", selectedModel)
+            .apply()
     }
 
     Column(
@@ -158,7 +173,7 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
                     shape = RoundedCornerShape(2.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(selectedApp?.name ?: "SELECT TARGET APP", color = Color.White, fontFamily = FontFamily.Monospace)
+                    Text(if (selectedAppName.isNotEmpty()) selectedAppName else "SELECT TARGET APP", color = Color.White, fontFamily = FontFamily.Monospace)
                 }
             }
         }
@@ -205,7 +220,11 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
-                        onClick = { showModelDialog = true },
+                        onClick = { 
+                            // Simulate fetch from HTTPS
+                            isFetchingModels = true
+                            showModelDialog = true
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
                         shape = RoundedCornerShape(2.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -239,7 +258,9 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    selectedApp = app
+                                    selectedAppName = app.name
+                                    selectedAppPackage = app.packageName
+                                    savePrefs()
                                     showAppDialog = false
                                 }
                                 .padding(vertical = 12.dp)
@@ -254,27 +275,41 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
     }
 
     if (showModelDialog) {
+        LaunchedEffect(isFetchingModels) {
+            if (isFetchingModels) {
+                // Simulating network delay to fetch from HTTPS
+                kotlinx.coroutines.delay(1000)
+                availableModels = listOf("[YOLOv8-Fast]", "[YOLOv10-Silent]", "[Cloud-AI-Bypass]", "[Auto-Detect HTTPS]")
+                isFetchingModels = false
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showModelDialog = false },
             containerColor = Color.Black,
             titleContentColor = Color.White,
-            title = { Text("[ FETCHED MODELS ]", fontFamily = FontFamily.Monospace) },
+            title = { Text(if (isFetchingModels) "FETCHING FROM HTTPS..." else "[ FETCHED MODELS ]", fontFamily = FontFamily.Monospace) },
             text = {
-                Column {
-                    availableModels.forEach { model ->
-                        Text(
-                            text = "> $model",
-                            color = Color.LightGray,
-                            fontFamily = FontFamily.Monospace,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedModel = model
-                                    showModelDialog = false
-                                }
-                                .padding(vertical = 12.dp)
-                        )
+                if (!isFetchingModels) {
+                    Column {
+                        availableModels.forEach { model ->
+                            Text(
+                                text = "> $model",
+                                color = Color.LightGray,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedModel = model
+                                        savePrefs()
+                                        showModelDialog = false
+                                    }
+                                    .padding(vertical = 12.dp)
+                            )
+                        }
                     }
+                } else {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.padding(16.dp))
                 }
             },
             confirmButton = {

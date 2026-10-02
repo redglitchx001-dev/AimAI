@@ -1,16 +1,15 @@
 package com.redglitchx.aimai
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.view.View
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +35,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.view.View
 
 class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
@@ -79,6 +80,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                 
                 if (isExpanded) {
                     ExpandedOverlay(
+                        context = this@OverlayService,
                         onClose = { isExpanded = false },
                         onCloseService = { stopSelf() }
                     )
@@ -117,18 +119,30 @@ fun FloatingBubble(
     windowManager: WindowManager,
     view: View
 ) {
-    var initialX = 0
-    var initialY = 0
-    var initialTouchX = 0f
-    var initialTouchY = 0f
+    var offsetX by remember { mutableStateOf(params.x.toFloat()) }
+    var offsetY by remember { mutableStateOf(params.y.toFloat()) }
 
-    // Black and white theme for the bubble
     Box(
         modifier = Modifier
             .size(64.dp)
             .clip(CircleShape)
             .background(Color.Black)
-            .padding(4.dp),
+            .padding(4.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                        params.x = offsetX.toInt()
+                        params.y = offsetY.toInt()
+                        windowManager.updateViewLayout(view, params)
+                    },
+                    onDragEnd = {
+                        // Optional snap to edge could be added here
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -148,42 +162,12 @@ fun FloatingBubble(
             }
         }
     }
-    
-    // Add touch listener to view for dragging
-    DisposableEffect(Unit) {
-        view.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    false
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(view, params)
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (Math.abs(event.rawX - initialTouchX) < 10 && Math.abs(event.rawY - initialTouchY) < 10) {
-                        v.performClick()
-                        onClick()
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        onDispose {
-            view.setOnTouchListener(null)
-        }
-    }
 }
 
 @Composable
-fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
+fun ExpandedOverlay(context: Context, onClose: () -> Unit, onCloseService: () -> Unit) {
+    val prefs = context.getSharedPreferences("AimAIPrefs", Context.MODE_PRIVATE)
+
     var aimOn by remember { mutableStateOf(false) }
     var scopeOnly by remember { mutableStateOf(true) }
     var normalAim by remember { mutableStateOf(true) }
@@ -192,8 +176,8 @@ fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
     var bypass by remember { mutableStateOf(true) }
     var antiCheat by remember { mutableStateOf(true) }
     
-    var selectedApp by remember { mutableStateOf("Select Target App") }
-    var selectedModel by remember { mutableStateOf("Auto-detect Model (HTTPS)") }
+    val selectedApp = prefs.getString("selected_app_name", "Select Target App") ?: "Select Target App"
+    val selectedModel = prefs.getString("selected_model", "Auto-detect Model (HTTPS)") ?: "Auto-detect Model (HTTPS)"
 
     Card(
         modifier = Modifier
@@ -223,12 +207,12 @@ fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
             Divider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 8.dp))
             
             // App and Model Selection
-            Button(onClick = { selectedApp = "App Selected (Injected)" }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
-                Text(selectedApp, color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text("App: $selectedApp", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Button(onClick = { selectedModel = "Model Loaded [YOLOv8]" }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
-                Text(selectedModel, color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text("Model: $selectedModel", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -253,7 +237,7 @@ fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(4.dp)
             ) {
-                Text("TERMINATE PROCESS", color = Color.Black, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("DELETE BUBBLE & TERMINATE", color = Color.Black, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
     }
