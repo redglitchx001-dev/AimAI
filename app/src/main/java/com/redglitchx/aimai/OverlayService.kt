@@ -213,7 +213,7 @@ fun ExpandedOverlay(onClose: () -> Unit, onCloseService: () -> Unit) {
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Swipe/Scope: \${swipeValue.toInt()}", color = Color.LightGray)
+            Text("Swipe/Scope: ${swipeValue.toInt()}", color = Color.LightGray)
             Slider(
                 value = swipeValue,
                 onValueChange = { swipeValue = it },
