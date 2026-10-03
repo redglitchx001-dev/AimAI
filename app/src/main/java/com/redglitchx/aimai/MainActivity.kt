@@ -110,7 +110,9 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
     val prefs = context.getSharedPreferences("AimAIPrefs", Context.MODE_PRIVATE)
 
     var aiEnabled by remember { mutableStateOf(true) }
-    var endpoint by remember { mutableStateOf("https://api.models.local/v1/detect") }
+    var endpoint by remember { mutableStateOf(prefs.getString("endpoint", "https://api.models.local/v1/detect") ?: "https://api.models.local/v1/detect") }
+    var apiKey by remember { mutableStateOf(prefs.getString("api_key", "") ?: "") }
+    var customModelId by remember { mutableStateOf(prefs.getString("custom_model_id", "") ?: "") }
     var selectedModel by remember { mutableStateOf(prefs.getString("selected_model", "[SELECT MODEL]") ?: "[SELECT MODEL]") }
     var showModelDialog by remember { mutableStateOf(false) }
     var availableModels by remember { mutableStateOf(listOf("[YOLOv8-Fast]", "[YOLOv10-Silent]", "[Auto-Detect HTTPS]")) }
@@ -131,6 +133,9 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
             .putString("selected_app_pkg", selectedAppPackage)
             .putString("selected_app_name", selectedAppName)
             .putString("selected_model", selectedModel)
+            .putString("endpoint", endpoint)
+            .putString("api_key", apiKey)
+            .putString("custom_model_id", customModelId)
             .apply()
     }
 
@@ -211,8 +216,40 @@ fun MainScreen(context: Context, onStartOverlay: () -> Unit) {
                     
                     OutlinedTextField(
                         value = endpoint,
-                        onValueChange = { endpoint = it },
+                        onValueChange = { endpoint = it; savePrefs() },
                         label = { Text("HTTPS ENDPOINT", color = Color.Gray, fontFamily = FontFamily.Monospace) },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontFamily = FontFamily.Monospace),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.DarkGray,
+                            cursorColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it; savePrefs() },
+                        label = { Text("API KEY (HTTPS Auth)", color = Color.Gray, fontFamily = FontFamily.Monospace) },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontFamily = FontFamily.Monospace),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.DarkGray,
+                            cursorColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = customModelId,
+                        onValueChange = { customModelId = it; savePrefs() },
+                        label = { Text("OPTIONAL MODEL ID", color = Color.Gray, fontFamily = FontFamily.Monospace) },
                         textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontFamily = FontFamily.Monospace),
                         colors = TextFieldDefaults.outlinedTextFieldColors(
                             focusedBorderColor = Color.White,

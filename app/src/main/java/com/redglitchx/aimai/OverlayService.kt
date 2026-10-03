@@ -126,7 +126,7 @@ fun FloatingBubble(
         modifier = Modifier
             .size(64.dp)
             .clip(CircleShape)
-            .background(Color.Black)
+            .background(Color.Transparent)
             .padding(4.dp)
             .pointerInput(Unit) {
                 detectDragGestures(
@@ -149,7 +149,7 @@ fun FloatingBubble(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CircleShape)
-                .background(Color.DarkGray),
+                .background(androidx.compose.ui.graphics.Color(0x66FFFFFF)),
             contentAlignment = Alignment.Center
         ) {
             Button(
@@ -176,16 +176,33 @@ fun ExpandedOverlay(context: Context, onClose: () -> Unit, onCloseService: () ->
     var bypass by remember { mutableStateOf(true) }
     var antiCheat by remember { mutableStateOf(true) }
     
+    // Pro Features
+    var espLines by remember { mutableStateOf(true) }
+    var triggerBot by remember { mutableStateOf(false) }
+    var recoilControl by remember { mutableStateOf(true) }
+    var autoFire by remember { mutableStateOf(false) }
+    var dynamicFov by remember { mutableStateOf(true) }
+    var silentAim by remember { mutableStateOf(false) }
+    
     val selectedApp = prefs.getString("selected_app_name", "Select Target App") ?: "Select Target App"
     val selectedModel = prefs.getString("selected_model", "Auto-detect Model (HTTPS)") ?: "Auto-detect Model (HTTPS)"
+    val endpoint = prefs.getString("endpoint", "https://api.models.local/v1/detect") ?: "https://api.models.local/v1/detect"
+    val apiKey = prefs.getString("api_key", "") ?: ""
+    val customModelId = prefs.getString("custom_model_id", "") ?: ""
 
     Card(
         modifier = Modifier
             .width(320.dp)
-            .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = Color.Black),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(2.dp, Color.DarkGray)
+            .wrapContentHeight()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(Color(0x40000000), Color(0x10FFFFFF))
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF)),
+        shape = RoundedCornerShape(24.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x44FFFFFF))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header
@@ -197,22 +214,30 @@ fun ExpandedOverlay(context: Context, onClose: () -> Unit, onCloseService: () ->
                 Text("SYSTEM.AIM_AI [v1.0.0]", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 Button(
                     onClick = onClose,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
                     contentPadding = PaddingValues(4.dp),
                     modifier = Modifier.size(28.dp)
                 ) {
-                    Text("X", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("X", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
-            Divider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 8.dp))
+            Divider(color = Color(0x33FFFFFF), modifier = Modifier.padding(vertical = 8.dp))
             
             // App and Model Selection
-            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
                 Text("App: $selectedApp", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
                 Text("Model: $selectedModel", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text("API KEY: ${if(apiKey.isNotEmpty()) "SET [HTTPS DETECT]" else "NOT SET"}", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                Text("CUSTOM ID: ${if(customModelId.isNotEmpty()) customModelId else "AUTO DETECT"}", color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -223,6 +248,11 @@ fun ExpandedOverlay(context: Context, onClose: () -> Unit, onCloseService: () ->
             TechSwitch("In-Scope Only", scopeOnly) { scopeOnly = it }
             TechSwitch("Bypass Detection", bypass) { bypass = it }
             TechSwitch("Anti-Cheat Blocker", antiCheat) { antiCheat = it }
+            TechSwitch("Silent Aim (Memory)", silentAim) { silentAim = it }
+            TechSwitch("ESP (Wallhack Lines)", espLines) { espLines = it }
+            TechSwitch("TriggerBot (Auto-Shoot)", triggerBot) { triggerBot = it }
+            TechSwitch("Recoil Control System", recoilControl) { recoilControl = it }
+            TechSwitch("Dynamic FOV Resize", dynamicFov) { dynamicFov = it }
 
             Spacer(modifier = Modifier.height(12.dp))
             
@@ -233,11 +263,11 @@ fun ExpandedOverlay(context: Context, onClose: () -> Unit, onCloseService: () ->
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onCloseService,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(4.dp)
             ) {
-                Text("DELETE BUBBLE & TERMINATE", color = Color.Black, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("DELETE BUBBLE & TERMINATE", color = Color.White, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
     }
@@ -250,7 +280,7 @@ fun TechSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Un
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = Color.White, uncheckedThumbColor = Color.Gray, uncheckedTrackColor = Color.DarkGray)
+            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0x55FFFFFF), uncheckedThumbColor = Color.LightGray, uncheckedTrackColor = Color(0x22FFFFFF))
         )
     }
 }
@@ -266,7 +296,7 @@ fun TechSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
                 activeTrackColor = Color.White,
-                inactiveTrackColor = Color.DarkGray
+                inactiveTrackColor = Color(0x33FFFFFF)
             )
         )
     }
